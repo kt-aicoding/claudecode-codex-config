@@ -50,6 +50,25 @@ class ClaudeStatusTests(unittest.TestCase):
             status,
         )
 
+    def test_colors_claude_risk_segments_when_enabled(self):
+        status = format_claude_status(
+            {
+                "model": "Claude Sonnet",
+                "effort": "high",
+                "context_window": {"used_percentage": 90},
+                "rate_limits": {
+                    "five_hour": {"remaining_percentage": 10},
+                    "weekly": {"remaining_percentage": 35},
+                },
+            },
+            use_color=True,
+        )
+
+        self.assertIn("\033[1mClaude Sonnet high\033[0m", status)
+        self.assertIn("\033[31mContext 90% used\033[0m", status)
+        self.assertIn("\033[31m5h 10% left\033[0m", status)
+        self.assertIn("\033[33mweekly 35% left\033[0m", status)
+
 
 class CodexConfigTests(unittest.TestCase):
     def test_adds_tui_section_when_missing(self):

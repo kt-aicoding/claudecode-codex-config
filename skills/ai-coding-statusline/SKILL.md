@@ -24,6 +24,8 @@ The target display is:
 <model> <effort> · Context <n>% used · 5h <n>% left · weekly <n>% left · <git-branch>
 ```
 
+Claude Code uses ANSI color warnings: context used turns yellow at 60% and red at 80%; 5h/weekly remaining turns yellow at 40% and red at 20%. Set `KT_STATUSLINE_NO_COLOR=1` to disable color.
+
 After installation, tell the user to restart Claude Code and Codex so both tools reload their config.
 
 ## Local Development

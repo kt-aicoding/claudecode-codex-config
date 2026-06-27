@@ -26,6 +26,19 @@ gpt-5.5 high · Context 25% used · 5h 67% left · weekly 71% left · main
 模型 effort · Context 已用百分比 · 5h 剩余百分比 · weekly 剩余百分比 · 当前 Git 分支
 ```
 
+Claude Code 的状态栏会使用 ANSI 颜色做预警：
+
+| 字段 | 绿色 | 黄色 | 红色 |
+| --- | --- | --- | --- |
+| Context used | `< 60%` | `60-79%` | `>= 80%` |
+| 5h / weekly left | `> 40%` | `21-40%` | `<= 20%` |
+
+如果不想显示颜色：
+
+```bash
+KT_STATUSLINE_NO_COLOR=1
+```
+
 ## 会改什么
 
 安装脚本会写入一个本地状态栏命令：
@@ -60,6 +73,8 @@ status_line_use_colors = true
 ```
 
 写入前会自动生成带时间戳的备份文件。
+
+Claude Code 官方 statusLine 支持 ANSI 颜色；Codex CLI 这里使用内置 TUI 状态栏项和 `status_line_use_colors = true`。
 
 ## Skill
 

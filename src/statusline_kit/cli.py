@@ -20,6 +20,14 @@ CODEX_STATUS_LINE = """status_line = [
 ]
 status_line_use_colors = true"""
 
+RESET = "\033[0m"
+BOLD = "\033[1m"
+DIM = "\033[2m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RED = "\033[31m"
+CYAN = "\033[36m"
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
@@ -87,11 +95,11 @@ def render_claude_command() -> int:
         payload = json.loads(raw) if raw else {}
     except json.JSONDecodeError:
         payload = {}
-    print(format_claude_status(payload))
+    print(format_claude_status(payload, use_color=should_use_color()))
     return 0
 
 
-def format_claude_status(payload: dict[str, Any]) -> str:
+def format_claude_status(payload: dict[str, Any], use_color: bool = False) -> str:
     model = first_text(
         nested(payload, "model", "display_name"),
         nested(payload, "model", "name"),
@@ -124,16 +132,44 @@ def format_claude_status(payload: dict[str, Any]) -> str:
     headline = model
     if effort:
         headline = f"{headline} {effort}"
-    parts = [headline]
+    parts = [colorize(headline, BOLD, use_color)]
     if context_used is not None:
-        parts.append(f"Context {format_percent(context_used)} used")
+        parts.append(colorize(f"Context {format_percent(context_used)} used", context_color(context_used), use_color))
     if five_hour_left is not None:
-        parts.append(f"5h {format_percent(five_hour_left)} left")
+        parts.append(colorize(f"5h {format_percent(five_hour_left)} left", remaining_color(five_hour_left), use_color))
     if weekly_left is not None:
-        parts.append(f"weekly {format_percent(weekly_left)} left")
+        parts.append(colorize(f"weekly {format_percent(weekly_left)} left", remaining_color(weekly_left), use_color))
     if branch:
-        parts.append(branch)
+        parts.append(colorize(branch, CYAN, use_color))
     return " · ".join(parts)
+
+
+def should_use_color() -> bool:
+    return not os.environ.get("KT_STATUSLINE_NO_COLOR")
+
+
+def colorize(text: str, color: str, enabled: bool) -> str:
+    if not enabled or not color:
+        return text
+    return f"{color}{text}{RESET}"
+
+
+def context_color(value: float) -> str:
+    used = normalize_percent(value)
+    if used >= 80:
+        return RED
+    if used >= 60:
+        return YELLOW
+    return GREEN
+
+
+def remaining_color(value: float) -> str:
+    left = normalize_percent(value)
+    if left <= 20:
+        return RED
+    if left <= 40:
+        return YELLOW
+    return GREEN
 
 
 def nested(data: dict[str, Any], *path: str) -> Any:
