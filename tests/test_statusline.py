@@ -106,14 +106,23 @@ gpt-5-codex = "seen"
     def test_installs_safe_codex_preferences(self):
         result = upsert_codex_config('model = "gpt-5.5"\n')
 
+        self.assertIn('model = "gpt-5.5"', result)
+        self.assertIn('model_reasoning_effort = "xhigh"', result)
+        self.assertIn('approval_policy = "on-request"', result)
+        self.assertIn('sandbox_mode = "workspace-write"', result)
         self.assertIn("check_for_update_on_startup = false", result)
         self.assertIn('project_doc_fallback_filenames = ["CLAUDE.md", "README.md"]', result)
+        self.assertIn("[sandbox_workspace_write]", result)
+        self.assertIn("network_access = false", result)
         self.assertIn("[history]", result)
         self.assertIn('persistence = "save-all"', result)
         self.assertIn("[shell_environment_policy]", result)
         self.assertIn('"*TOKEN*"', result)
         self.assertIn("[agents]", result)
         self.assertIn("max_threads = 6", result)
+        self.assertIn('[plugins."vercel@openai-curated"]', result)
+        self.assertIn("[mcp_servers.context7]", result)
+        self.assertIn("[mcp_servers.playwright]", result)
 
     def test_full_codex_config_preserves_nested_tables(self):
         original = """model = "gpt-5.5"

@@ -27,13 +27,22 @@ python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/cc-codex-
 - 写入 `[tui].status_line`
 - 开启 `status_line_use_colors`
 - 写入安全的通用偏好：
+  - `model = "gpt-5.5"`
+  - `model_reasoning_effort = "xhigh"`
+  - `model_verbosity = "medium"`
+  - `review_model = "gpt-5.5"`
+  - `approval_policy = "on-request"`
+  - `sandbox_mode = "workspace-write"`
   - `check_for_update_on_startup = false`
   - `project_doc_fallback_filenames = ["CLAUDE.md", "README.md"]`
   - `project_doc_max_bytes = 100000`
   - `tool_output_token_limit = 40000`
+  - `[sandbox_workspace_write]` 默认禁用网络并排除临时目录
   - `[history]` 保存历史
   - `[shell_environment_policy]` 过滤 token / secret / key / password
   - `[agents]` 设置并发和运行时间上限
+  - 常用 OpenAI curated plugins：Vercel、Supabase、Build Web Apps、Expo
+  - 常用 MCP servers：context7、playwright
 
 写入前会自动生成带时间戳的备份文件。
 

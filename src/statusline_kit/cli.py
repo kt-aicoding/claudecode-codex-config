@@ -21,6 +21,12 @@ CODEX_STATUS_LINE = """status_line = [
 status_line_use_colors = true"""
 
 CODEX_TOP_LEVEL_PREFERENCES = {
+    "model": '"gpt-5.5"',
+    "model_reasoning_effort": '"xhigh"',
+    "model_verbosity": '"medium"',
+    "review_model": '"gpt-5.5"',
+    "approval_policy": '"on-request"',
+    "sandbox_mode": '"workspace-write"',
     "check_for_update_on_startup": "false",
     "project_doc_fallback_filenames": '["CLAUDE.md", "README.md"]',
     "project_doc_max_bytes": "100000",
@@ -29,8 +35,15 @@ CODEX_TOP_LEVEL_PREFERENCES = {
 
 CODEX_CONFIG_SECTIONS = {
     "history": 'persistence = "save-all"\nmax_bytes = 10485760',
+    "sandbox_workspace_write": "network_access = false\nexclude_slash_tmp = true\nexclude_tmpdir_env_var = true",
     "shell_environment_policy": 'inherit = "all"\nexclude = ["*TOKEN*", "*SECRET*", "*KEY*", "*PASSWORD*", "*password*"]',
     "agents": "max_threads = 6\nmax_depth = 1\njob_max_runtime_seconds = 1800",
+    'plugins."vercel@openai-curated"': "enabled = true",
+    'plugins."supabase@openai-curated"': "enabled = true",
+    'plugins."build-web-apps@openai-curated"': "enabled = true",
+    'plugins."expo@openai-curated"': "enabled = true",
+    "mcp_servers.context7": 'command = "npx"\nargs = ["-y", "@upstash/context7-mcp"]',
+    "mcp_servers.playwright": 'command = "npx"\nargs = ["@playwright/mcp@latest", "--headless"]',
 }
 
 RESET = "\033[0m"
