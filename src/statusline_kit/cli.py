@@ -355,7 +355,7 @@ def upsert_codex_config(text: str) -> str:
     updated = upsert_tui_status_line(updated)
     for table_name, body in CODEX_CONFIG_SECTIONS.items():
         updated = upsert_table(updated, table_name, body)
-    return updated
+    return normalize_table_spacing(updated)
 
 
 def upsert_top_level_preferences(text: str, preferences: dict[str, str]) -> str:
@@ -408,6 +408,17 @@ def upsert_table(text: str, table_name: str, body: str) -> str:
         return (prefix + "\n\n" if prefix else "") + section
     new_lines = lines[:start] + replacement + lines[end:]
     return "\n".join(new_lines).rstrip() + "\n"
+
+
+def normalize_table_spacing(text: str) -> str:
+    result: list[str] = []
+    for line in text.strip().splitlines():
+        stripped = line.strip()
+        is_table = stripped.startswith("[") and stripped.endswith("]")
+        if is_table and result and result[-1].strip():
+            result.append("")
+        result.append(line)
+    return "\n".join(result).rstrip() + "\n"
 
 
 def find_table(lines: list[str], table_name: str) -> tuple[int | None, int]:
