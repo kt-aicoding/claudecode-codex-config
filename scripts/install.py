@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import sys
 
 
 STATUSLINE_SCRIPT = r'''#!/usr/bin/env python3
@@ -313,25 +314,77 @@ CODEX_CONFIG_SECTIONS = {
     "mcp_servers.playwright": 'command = "npx"\nargs = ["@playwright/mcp@latest", "--headless"]',
 }
 
+CODEX_PROFILE_TEMPLATES = {
+    "fast": '''# Fast profile for short interactive turns.
+# Use with: codex --profile fast
+
+model_reasoning_effort = "medium"
+model_verbosity = "low"
+tool_output_token_limit = 20000
+
+[agents]
+max_threads = 4
+max_depth = 1
+job_max_runtime_seconds = 900
+''',
+    "deep": '''# Deep profile for larger implementation/review sessions.
+# Use with: codex --profile deep
+
+model_reasoning_effort = "xhigh"
+model_verbosity = "medium"
+tool_output_token_limit = 60000
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 2400
+''',
+}
+
+ENV_SNIPPET = '''# kt-aicoding optional statusline controls.
+# Source this file from your shell profile only if you want these extra segments.
+
+# export KT_STATUSLINE_SHOW_CWD=1
+# export KT_STATUSLINE_SHOW_TOKENS=1
+# export KT_STATUSLINE_SHOW_COST=1
+# export KT_STATUSLINE_SHOW_VERSION=1
+
+# Warp exports NO_COLOR=1 in some sessions. This tool ignores generic NO_COLOR.
+# Use this only when you explicitly want plain text.
+# export KT_STATUSLINE_NO_COLOR=1
+'''
+
 
 def main() -> int:
     install_dir = Path(os.environ.get("KT_AICODING_CONFIG_HOME", Path.home() / ".kt-aicoding" / "cc-codex-config"))
     command_path = install_dir / "kt-statusline"
     write_statusline_command(command_path)
+    write_support_files(install_dir)
 
     claude_settings = Path(os.environ.get("CLAUDE_DIR", Path.home() / ".claude")) / "settings.json"
     codex_config = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "config.toml"
 
     claude_backup = install_claude(claude_settings, command_path)
     codex_backup = install_codex(codex_config)
+    profile_backups = install_codex_profiles(codex_config.parent)
 
     print("KT AI Coding config installed.")
+    print(f"Local command:  {command_path}")
+    print(f"Local notes:    {install_dir / 'README.txt'}")
     print(f"Claude Code: {claude_settings}")
     if claude_backup:
         print(f"Claude backup: {claude_backup}")
     print(f"Codex CLI:    {codex_config}")
     if codex_backup:
         print(f"Codex backup: {codex_backup}")
+    print("Codex profiles:")
+    for name in CODEX_PROFILE_TEMPLATES:
+        path = codex_config.parent / f"{name}.config.toml"
+        print(f"  codex --profile {name}: {path}")
+    for backup in profile_backups:
+        if backup:
+            print(f"Codex profile backup: {backup}")
+    print_dependency_report()
     if is_warp_terminal():
         print("Warp detected: Claude statusLine colors stay enabled even when Warp exports NO_COLOR=1.")
         print("Set KT_STATUSLINE_NO_COLOR=1 only if you want plain text.")
@@ -349,8 +402,44 @@ def is_warp_terminal() -> bool:
 
 def write_statusline_command(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(STATUSLINE_SCRIPT)
+    path.write_text(STATUSLINE_SCRIPT, encoding="utf-8")
     path.chmod(0o755)
+
+
+def write_support_files(install_dir: Path) -> None:
+    install_dir.mkdir(parents=True, exist_ok=True)
+    (install_dir / "env.sh").write_text(ENV_SNIPPET, encoding="utf-8")
+    (install_dir / "README.txt").write_text(local_readme_text(install_dir), encoding="utf-8")
+
+
+def local_readme_text(install_dir: Path) -> str:
+    return f"""KT AI Coding config
+
+Installed files:
+- Claude Code settings: $CLAUDE_DIR/settings.json or ~/.claude/settings.json
+- Codex config: $CODEX_HOME/config.toml or ~/.codex/config.toml
+- Local statusline command: {install_dir / "kt-statusline"}
+- Optional env snippet: {install_dir / "env.sh"}
+
+Default statusline:
+model effort · Context used% · 5h left% · weekly left% · git branch
+
+Optional Claude Code segments:
+export KT_STATUSLINE_SHOW_CWD=1
+export KT_STATUSLINE_SHOW_TOKENS=1
+export KT_STATUSLINE_SHOW_COST=1
+export KT_STATUSLINE_SHOW_VERSION=1
+
+Disable this tool's colors:
+export KT_STATUSLINE_NO_COLOR=1
+
+Codex profiles:
+codex --profile fast
+codex --profile deep
+
+Backups are written next to changed files with a .bak-YYYYmmdd-HHMMSS suffix.
+Project: https://github.com/kt-aicoding/cc-codex-config
+"""
 
 
 def install_claude(settings_path: Path, command_path: Path) -> Path | None:
@@ -361,7 +450,7 @@ def install_claude(settings_path: Path, command_path: Path) -> Path | None:
         "command": f"{command_path} claude",
     }
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
+    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return backup
 
 
@@ -369,7 +458,7 @@ def read_json_object(path: Path) -> dict:
     if not path.exists():
         return {}
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Cannot parse JSON file {path}: {exc}") from exc
     if not isinstance(data, dict):
@@ -378,11 +467,21 @@ def read_json_object(path: Path) -> dict:
 
 
 def install_codex(config_path: Path) -> Path | None:
-    text = config_path.read_text() if config_path.exists() else ""
+    text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
     backup = backup_file(config_path)
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(upsert_codex_config(text))
+    config_path.write_text(upsert_codex_config(text), encoding="utf-8")
     return backup
+
+
+def install_codex_profiles(codex_home: Path) -> list[Path | None]:
+    codex_home.mkdir(parents=True, exist_ok=True)
+    backups: list[Path | None] = []
+    for name, body in CODEX_PROFILE_TEMPLATES.items():
+        profile_path = codex_home / f"{name}.config.toml"
+        backups.append(backup_file(profile_path))
+        profile_path.write_text(body.rstrip() + "\n", encoding="utf-8")
+    return backups
 
 
 def upsert_codex_config(text: str) -> str:
@@ -504,6 +603,16 @@ def backup_file(path: Path) -> Path | None:
     backup = path.with_name(path.name + suffix)
     shutil.copy2(path, backup)
     return backup
+
+
+def print_dependency_report() -> None:
+    print("Tool check:")
+    print(f"  Warp:   {'detected' if is_warp_terminal() else 'not detected'}")
+    for command in ("claude", "codex", "git", "npx"):
+        location = shutil.which(command)
+        print(f"  {command:<6} {'found at ' + location if location else 'not found in PATH'}")
+    if sys.version_info < (3, 9):
+        print(f"  python current version is {sys.version.split()[0]}; Python 3.9+ is recommended.")
 
 
 if __name__ == "__main__":

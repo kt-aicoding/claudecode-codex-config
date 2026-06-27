@@ -8,7 +8,9 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from statusline_kit.cli import (
+    CODEX_PROFILE_TEMPLATES,
     format_claude_status,
+    install_codex_profiles,
     is_warp_terminal,
     main,
     should_use_color,
@@ -154,6 +156,19 @@ enabled = true
         self.assertIn('[plugins."vercel@openai-curated"]', result)
         self.assertIn("enabled = true", result)
 
+    def test_installs_codex_profiles_with_backups(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            codex_home = Path(tempdir)
+            existing = codex_home / "fast.config.toml"
+            existing.write_text("old = true\n", encoding="utf-8")
+
+            backups = install_codex_profiles(codex_home)
+
+            self.assertIn("codex --profile fast", (codex_home / "fast.config.toml").read_text(encoding="utf-8"))
+            self.assertIn("codex --profile deep", (codex_home / "deep.config.toml").read_text(encoding="utf-8"))
+            self.assertEqual({"fast", "deep"}, set(CODEX_PROFILE_TEMPLATES))
+            self.assertTrue(any(backup and backup.exists() and backup.name.startswith("fast.config.toml.bak-") for backup in backups))
+
 
 class CliDispatchTests(unittest.TestCase):
     def test_install_claude_dispatch_uses_status_command_arg(self):
@@ -172,6 +187,17 @@ class CliDispatchTests(unittest.TestCase):
 
             self.assertEqual(0, code)
             self.assertIn("custom-statusline claude", settings.read_text())
+
+    def test_install_codex_dispatch_writes_profiles(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            config = Path(tempdir) / "config.toml"
+
+            code = main(["install-codex", "--config", str(config)])
+
+            self.assertEqual(0, code)
+            self.assertTrue(config.exists())
+            self.assertTrue((Path(tempdir) / "fast.config.toml").exists())
+            self.assertTrue((Path(tempdir) / "deep.config.toml").exists())
 
 
 class WarpEnvironmentTests(unittest.TestCase):

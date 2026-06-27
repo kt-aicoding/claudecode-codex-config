@@ -46,6 +46,33 @@ CODEX_CONFIG_SECTIONS = {
     "mcp_servers.playwright": 'command = "npx"\nargs = ["@playwright/mcp@latest", "--headless"]',
 }
 
+CODEX_PROFILE_TEMPLATES = {
+    "fast": '''# Fast profile for short interactive turns.
+# Use with: codex --profile fast
+
+model_reasoning_effort = "medium"
+model_verbosity = "low"
+tool_output_token_limit = 20000
+
+[agents]
+max_threads = 4
+max_depth = 1
+job_max_runtime_seconds = 900
+''',
+    "deep": '''# Deep profile for larger implementation/review sessions.
+# Use with: codex --profile deep
+
+model_reasoning_effort = "xhigh"
+model_verbosity = "medium"
+tool_output_token_limit = 60000
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 2400
+''',
+}
+
 RESET = "\033[0m"
 BOLD = "\033[1m"
 DIM = "\033[2m"
@@ -93,6 +120,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Installed Codex CLI config in {args.config}")
         if backup:
             print(f"Backup: {backup}")
+        profile_backups = install_codex_profiles(args.config.parent)
+        for name in CODEX_PROFILE_TEMPLATES:
+            print(f"Installed Codex profile {name}: {args.config.parent / f'{name}.config.toml'}")
+        for profile_backup in profile_backups:
+            if profile_backup:
+                print(f"Profile backup: {profile_backup}")
         return 0
     if args.command == "doctor":
         print_doctor()
@@ -373,7 +406,7 @@ def install_claude_statusline(settings_path: Path, command: str) -> Path | None:
         "command": command,
     }
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n")
+    settings_path.write_text(json.dumps(settings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return backup
 
 
@@ -381,7 +414,7 @@ def read_json_object(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Cannot parse JSON file {path}: {exc}") from exc
     if not isinstance(data, dict):
@@ -390,12 +423,22 @@ def read_json_object(path: Path) -> dict[str, Any]:
 
 
 def install_codex_statusline(config_path: Path) -> Path | None:
-    text = config_path.read_text() if config_path.exists() else ""
+    text = config_path.read_text(encoding="utf-8") if config_path.exists() else ""
     backup = backup_file(config_path)
     updated = upsert_codex_config(text)
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(updated)
+    config_path.write_text(updated, encoding="utf-8")
     return backup
+
+
+def install_codex_profiles(codex_home: Path) -> list[Path | None]:
+    codex_home.mkdir(parents=True, exist_ok=True)
+    backups: list[Path | None] = []
+    for name, body in CODEX_PROFILE_TEMPLATES.items():
+        profile_path = codex_home / f"{name}.config.toml"
+        backups.append(backup_file(profile_path))
+        profile_path.write_text(body.rstrip() + "\n", encoding="utf-8")
+    return backups
 
 
 def upsert_codex_config(text: str) -> str:
