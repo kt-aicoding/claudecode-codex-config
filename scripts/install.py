@@ -77,13 +77,32 @@ def format_status(payload: dict[str, Any], use_color: bool = False) -> str:
         parts.append(colorize(f"5h {format_percent(five_hour_left)} left", remaining_color(five_hour_left), use_color))
     if weekly_left is not None:
         parts.append(colorize(f"weekly {format_percent(weekly_left)} left", remaining_color(weekly_left), use_color))
+    if env_flag("KT_STATUSLINE_SHOW_CWD") and cwd:
+        parts.append(colorize(Path(cwd).name, "\033[2m", use_color))
     if branch:
         parts.append(colorize(branch, CYAN, use_color))
+    if env_flag("KT_STATUSLINE_SHOW_TOKENS"):
+        token_text = token_summary(payload)
+        if token_text:
+            parts.append(colorize(token_text, "\033[2m", use_color))
+    if env_flag("KT_STATUSLINE_SHOW_COST"):
+        cost = first_float(nested(payload, "cost", "total_cost_usd"), nested(payload, "cost", "usd"), payload.get("total_cost_usd"))
+        if cost is not None:
+            parts.append(colorize(f"${cost:.4f}", "\033[2m", use_color))
+    if env_flag("KT_STATUSLINE_SHOW_VERSION"):
+        version = first_text(payload.get("version"))
+        if version:
+            parts.append(colorize(f"cc {version}", "\033[2m", use_color))
     return (" " + chr(183) + " ").join(parts)
 
 
 def should_use_color() -> bool:
     return not os.environ.get("KT_STATUSLINE_NO_COLOR")
+
+
+def env_flag(name: str) -> bool:
+    value = os.environ.get(name, "")
+    return value.lower() in {"1", "true", "yes", "on"}
 
 
 def colorize(text: str, color: str, enabled: bool) -> str:
@@ -189,6 +208,35 @@ def first_float(*values: Any) -> float | None:
             except ValueError:
                 continue
     return None
+
+
+def token_summary(payload: dict[str, Any]) -> str:
+    input_tokens = first_float(
+        nested(payload, "context_window", "total_input_tokens"),
+        nested(payload, "context_window", "current_usage", "input_tokens"),
+        nested(payload, "usage", "input_tokens"),
+    )
+    output_tokens = first_float(
+        nested(payload, "context_window", "total_output_tokens"),
+        nested(payload, "context_window", "current_usage", "output_tokens"),
+        nested(payload, "usage", "output_tokens"),
+    )
+    parts = []
+    if input_tokens is not None:
+        parts.append(f"in {compact_number(input_tokens)}")
+    if output_tokens is not None:
+        parts.append(f"out {compact_number(output_tokens)}")
+    return " ".join(parts)
+
+
+def compact_number(value: float) -> str:
+    if abs(value) >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if abs(value) >= 1_000:
+        return f"{value / 1_000:.1f}K"
+    if float(value).is_integer():
+        return str(int(value))
+    return f"{value:.1f}"
 
 
 def format_percent(value: float) -> str:

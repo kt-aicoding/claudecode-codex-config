@@ -188,6 +188,35 @@ class WarpEnvironmentTests(unittest.TestCase):
         with patch.dict("os.environ", {"KT_STATUSLINE_NO_COLOR": "1", "TERM_PROGRAM": "WarpTerminal"}, clear=True):
             self.assertFalse(should_use_color())
 
+    def test_optional_claude_segments_are_env_gated(self):
+        payload = {
+            "model": "Claude Sonnet",
+            "context_window": {
+                "used_percentage": 25,
+                "total_input_tokens": 1_420_000,
+                "total_output_tokens": 49_100,
+            },
+            "cost": {"total_cost_usd": 0.1234},
+            "workspace": {"current_dir": "/tmp/example-project"},
+            "version": "1.2.3",
+        }
+        with patch.dict(
+            "os.environ",
+            {
+                "KT_STATUSLINE_SHOW_CWD": "1",
+                "KT_STATUSLINE_SHOW_TOKENS": "1",
+                "KT_STATUSLINE_SHOW_COST": "1",
+                "KT_STATUSLINE_SHOW_VERSION": "1",
+            },
+            clear=True,
+        ):
+            status = format_claude_status(payload)
+
+        self.assertIn("example-project", status)
+        self.assertIn("in 1.4M out 49.1K", status)
+        self.assertIn("$0.1234", status)
+        self.assertIn("cc 1.2.3", status)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -87,10 +87,25 @@ configs/                         可公开审计的配置片段
 configs/claude/                  Claude Code 配置片段
 configs/codex/                   Codex CLI 配置片段
 configs/warp/                    Warp 终端使用建议
+configs/codex/profiles/          Codex profile 模板
+docs/related-projects.md         相关项目调研和取舍
 scripts/install.py               一句话安装脚本
 skills/ai-coding-config/         可复制的 Codex Skill
 src/statusline_kit/              Claude Code 状态栏渲染器和本地 CLI
 ```
+
+### Claude Code 可选状态栏字段
+
+默认状态栏保持短。如果需要临时显示更多信息，可以在启动 Claude Code 前设置：
+
+```bash
+export KT_STATUSLINE_SHOW_CWD=1
+export KT_STATUSLINE_SHOW_TOKENS=1
+export KT_STATUSLINE_SHOW_COST=1
+export KT_STATUSLINE_SHOW_VERSION=1
+```
+
+这些字段只影响 Claude Code 的本地 statusLine 渲染器，不影响 Codex CLI 内置状态栏。
 
 ## Skill
 

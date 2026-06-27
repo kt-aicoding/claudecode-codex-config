@@ -7,3 +7,5 @@
 - 不提交 API token、密钥、供应商鉴权配置。
 - 不提交个人机器上的项目 trust 列表。
 - 安装脚本只写入安全偏好和状态栏相关配置，并在写入前备份原文件。
+
+Codex profile 模板放在 `configs/codex/profiles/`。它们不会被默认安装脚本自动复制，避免覆盖你本机已有 profile；需要时可以手动复制到 `$CODEX_HOME/<name>.config.toml` 后用 `codex --profile <name>` 启用。

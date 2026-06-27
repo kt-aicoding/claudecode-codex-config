@@ -1,0 +1,11 @@
+# Deep profile for larger implementation/review sessions.
+# Use with: codex --profile deep
+
+model_reasoning_effort = "xhigh"
+model_verbosity = "medium"
+tool_output_token_limit = 60000
+
+[agents]
+max_threads = 6
+max_depth = 1
+job_max_runtime_seconds = 2400
