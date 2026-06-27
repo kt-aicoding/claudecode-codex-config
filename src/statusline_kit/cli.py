@@ -6,17 +6,13 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
 import sys
 from typing import Any, Iterable
 
 
 CODEX_STATUS_LINE = """status_line = [
   "model-with-reasoning",
-  "context-remaining",
-  "used-tokens",
-  "total-input-tokens",
-  "total-output-tokens",
+  "context-used",
   "five-hour-limit",
   "weekly-limit",
 ]
@@ -101,23 +97,30 @@ def format_claude_status(payload: dict[str, Any]) -> str:
         payload.get("model"),
         "Claude",
     )
-    cwd = first_text(
-        nested(payload, "workspace", "current_dir"),
-        nested(payload, "workspace", "project_dir"),
-        payload.get("cwd"),
-        os.getcwd(),
+    effort = first_text(
+        nested(payload, "effort", "level"),
+        payload.get("effort"),
+        nested(payload, "model", "reasoning_effort"),
+        payload.get("reasoning_effort"),
     )
-    project = Path(cwd).name if cwd else "workspace"
-    branch = git_branch(cwd)
-
-    input_tokens = first_int(
-        nested(payload, "usage", "input_tokens"),
-        nested(payload, "usage", "cache_creation_input_tokens"),
-        nested(payload, "token_usage", "input_tokens"),
+    context_used = first_float(
+        nested(payload, "context_window", "used_percentage"),
+        nested(payload, "context_window", "used_percent"),
+        nested(payload, "context", "used_percentage"),
+        nested(payload, "context", "used_percent"),
+        payload.get("context_used_percentage"),
     )
-    output_tokens = first_int(
-        nested(payload, "usage", "output_tokens"),
-        nested(payload, "token_usage", "output_tokens"),
+    five_hour = first_float(
+        nested(payload, "rate_limits", "five_hour", "used_percentage"),
+        nested(payload, "rate_limits", "five_hour", "used_percent"),
+        rate_limit_value(payload, ("five_hour", "5h")),
+    )
+    seven_day = first_float(
+        nested(payload, "rate_limits", "seven_day", "used_percentage"),
+        nested(payload, "rate_limits", "seven_day", "used_percent"),
+        nested(payload, "rate_limits", "weekly", "used_percentage"),
+        nested(payload, "rate_limits", "weekly", "used_percent"),
+        rate_limit_value(payload, ("seven_day", "7d", "weekly")),
     )
     cost = first_float(
         nested(payload, "cost", "total_cost_usd"),
@@ -125,12 +128,15 @@ def format_claude_status(payload: dict[str, Any]) -> str:
         payload.get("total_cost_usd"),
     )
 
-    parts = [f"CC {model}", project]
-    if branch:
-        parts.append(branch)
-    token_text = token_summary(input_tokens, output_tokens)
-    if token_text:
-        parts.append(token_text)
+    parts = [model]
+    if effort:
+        parts.append(f"effort {effort}")
+    if context_used is not None:
+        parts.append(f"context {format_percent(context_used)}")
+    if five_hour is not None:
+        parts.append(f"5h {format_percent(five_hour)}")
+    if seven_day is not None:
+        parts.append(f"7d {format_percent(seven_day)}")
     if cost is not None:
         parts.append(f"${cost:.4f}")
     return " | ".join(parts)
@@ -145,6 +151,20 @@ def nested(data: dict[str, Any], *path: str) -> Any:
     return current
 
 
+def rate_limit_value(payload: dict[str, Any], names: tuple[str, ...]) -> Any:
+    rate_limits = payload.get("rate_limits")
+    if not isinstance(rate_limits, list):
+        return None
+    normalized = {name.replace("-", "_").lower() for name in names}
+    for item in rate_limits:
+        if not isinstance(item, dict):
+            continue
+        item_name = first_text(item.get("name"), item.get("window"), item.get("type"))
+        if item_name.replace("-", "_").lower() in normalized:
+            return item.get("used_percentage", item.get("used_percent"))
+    return None
+
+
 def first_text(*values: Any) -> str:
     for value in values:
         if isinstance(value, str) and value.strip():
@@ -154,20 +174,6 @@ def first_text(*values: Any) -> str:
             if isinstance(display, str) and display.strip():
                 return display.strip()
     return ""
-
-
-def first_int(*values: Any) -> int | None:
-    for value in values:
-        if isinstance(value, bool):
-            continue
-        if isinstance(value, int):
-            return value
-        if isinstance(value, str):
-            try:
-                return int(value)
-            except ValueError:
-                continue
-    return None
 
 
 def first_float(*values: Any) -> float | None:
@@ -184,43 +190,13 @@ def first_float(*values: Any) -> float | None:
     return None
 
 
-def token_summary(input_tokens: int | None, output_tokens: int | None) -> str:
-    bits = []
-    if input_tokens is not None:
-        bits.append(f"in {compact_number(input_tokens)}")
-    if output_tokens is not None:
-        bits.append(f"out {compact_number(output_tokens)}")
-    return " ".join(bits)
-
-
-def compact_number(value: int) -> str:
-    if abs(value) >= 1_000_000:
-        return f"{value / 1_000_000:.1f}m"
-    if abs(value) >= 10_000:
-        return f"{value // 1_000}k"
-    if abs(value) >= 1_000:
-        return f"{value / 1_000:.1f}k"
-    return str(value)
-
-
-def git_branch(cwd: str) -> str:
-    if not cwd:
-        return ""
-    try:
-        result = subprocess.run(
-            ["git", "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"],
-            check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=0.2,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return ""
-    branch = result.stdout.strip()
-    if result.returncode != 0 or branch == "HEAD":
-        return ""
-    return branch
+def format_percent(value: float) -> str:
+    if 0 <= value <= 1:
+        value = value * 100
+    rounded = round(value, 1)
+    if rounded.is_integer():
+        return f"{int(rounded)}%"
+    return f"{rounded}%"
 
 
 def install_claude_statusline(settings_path: Path, command: str) -> Path | None:

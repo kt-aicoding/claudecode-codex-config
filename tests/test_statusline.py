@@ -14,19 +14,41 @@ class ClaudeStatusTests(unittest.TestCase):
         status = format_claude_status(
             {
                 "model": {"display_name": "Claude Sonnet"},
-                "workspace": {"current_dir": "/tmp/statusline-kit"},
-                "usage": {"input_tokens": 12450, "output_tokens": 830},
+                "effort": {"level": "medium"},
+                "context_window": {"used_percentage": 37.5},
+                "rate_limits": {
+                    "five_hour": {"used_percentage": 12},
+                    "seven_day": {"used_percentage": 64},
+                },
                 "cost": {"total_cost_usd": 0.0214},
             }
         )
 
-        self.assertIn("CC Claude Sonnet", status)
-        self.assertIn("statusline-kit", status)
-        self.assertIn("in 12k out 830", status)
-        self.assertIn("$0.0214", status)
+        self.assertEqual(
+            "Claude Sonnet | effort medium | context 37.5% | 5h 12% | 7d 64% | $0.0214",
+            status,
+        )
 
     def test_tolerates_missing_json_fields(self):
-        self.assertTrue(format_claude_status({}).startswith("CC Claude"))
+        self.assertEqual("Claude", format_claude_status({}))
+
+    def test_formats_fractional_percentages_and_list_rate_limits(self):
+        status = format_claude_status(
+            {
+                "model": "Claude Sonnet",
+                "effort": "high",
+                "context_window": {"used_percent": 0.42},
+                "rate_limits": [
+                    {"name": "5h", "used_percent": 0.25},
+                    {"name": "weekly", "used_percent": 0.75},
+                ],
+            }
+        )
+
+        self.assertEqual(
+            "Claude Sonnet | effort high | context 42% | 5h 25% | 7d 75%",
+            status,
+        )
 
 
 class CodexConfigTests(unittest.TestCase):
@@ -35,6 +57,9 @@ class CodexConfigTests(unittest.TestCase):
 
         self.assertIn("[tui]", result)
         self.assertIn('"model-with-reasoning"', result)
+        self.assertIn('"context-used"', result)
+        self.assertIn('"five-hour-limit"', result)
+        self.assertIn('"weekly-limit"', result)
         self.assertIn("status_line_use_colors = true", result)
 
     def test_replaces_status_line_and_preserves_other_tui_keys(self):
