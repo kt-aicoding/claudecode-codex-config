@@ -1,24 +1,52 @@
-# cc-codex-config
+# claudecode-codex-config
 
-![cc-codex-config banner](assets/banner.svg)
+![claudecode-codex-config banner](assets/banner.svg)
 
-我的 Claude Code（cc）和 Codex CLI 配置仓库，面向 Warp 终端使用场景维护。
+我的 Claude Code（cc）和 Codex CLI 配置仓库，面向 Warp 终端使用场景维护。目标是让其他用户复制一句命令，就能得到同一套可公开的 AI Coding 基础配置。
 
 这里统一保存可公开的 AI Coding 配置：状态栏、Codex 偏好、Warp 注意事项、操作资料、Codex Skill、profile 模板和一键安装脚本。状态栏只是第一个模块，后续 cc / Codex 相关的安全配置和个人偏好都放在这里维护。
 
 ## 一句话配置
 
 ```bash
-python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/cc-codex-config/main/scripts/install.py)"
+python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/claudecode-codex-config/main/scripts/install.py)"
 ```
 
-运行后重启 Claude Code 和 Codex。
+运行后重启 Warp 里的 Claude Code 和 Codex 会话。
+
+这一句会给用户安装同一套配置：
+
+- Claude Code：状态栏显示模型、effort、context 已用、5h/weekly 剩余额度、当前 Git 分支。
+- Codex CLI：写入状态栏、默认模型偏好、安全 sandbox、history、agents、MCP 和 OpenAI curated plugins。
+- Codex profiles：安装 `codex --profile fast` 和 `codex --profile deep` 两个模板。
+- Warp：自动识别 Warp 环境，保留状态栏颜色；只在显式设置 `KT_STATUSLINE_NO_COLOR=1` 时关闭颜色。
+- 本地资料：写入 `~/.kt-aicoding/claudecode-codex-config/README.txt` 和 `env.sh`，方便安装后查看可选环境变量。
 
 安装脚本会先备份原配置，再增量写入安全配置：
 
 - Claude Code：`~/.claude/settings.json`
 - Codex CLI：`~/.codex/config.toml`
-- 本地状态栏命令：`~/.kt-aicoding/cc-codex-config/kt-statusline`
+- Codex profiles：`~/.codex/fast.config.toml`、`~/.codex/deep.config.toml`
+- 本地状态栏命令：`~/.kt-aicoding/claudecode-codex-config/kt-statusline`
+
+备份文件会放在原文件旁边，格式是 `.bak-YYYYmmdd-HHMMSS`。脚本不会写入 API key、OAuth token、项目 trust 列表或私有业务上下文。
+
+安装后快速验证：
+
+```bash
+~/.kt-aicoding/claudecode-codex-config/kt-statusline claude <<< '{}'
+codex --profile fast --help
+codex --profile deep --help
+```
+
+如果要打开更多 Claude Code 状态栏字段，可以把下面几行加入你的 shell profile，或先查看 `~/.kt-aicoding/claudecode-codex-config/env.sh`：
+
+```bash
+export KT_STATUSLINE_SHOW_CWD=1
+export KT_STATUSLINE_SHOW_TOKENS=1
+export KT_STATUSLINE_SHOW_COST=1
+export KT_STATUSLINE_SHOW_VERSION=1
+```
 
 ## 快速入口
 
@@ -40,6 +68,7 @@ python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/cc-codex-
 - 检测 `TERM_PROGRAM=WarpTerminal` 或 `WARP_*` 环境变量。
 - Claude Code 状态栏颜色不会被 Warp 默认导出的 `NO_COLOR=1` 关闭。
 - 如需关闭本工具颜色，只设置 `KT_STATUSLINE_NO_COLOR=1`。
+- 安装脚本结束时会提示 `claude`、`codex`、`git`、`npx` 是否在 `PATH` 中；缺少工具不会阻止配置写入，但对应功能需要用户自行安装。
 
 ### Claude Code
 
@@ -50,6 +79,7 @@ python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/cc-codex-
 ### Codex CLI
 
 - 写入 `[tui].status_line` 和 `status_line_use_colors = true`。
+- 写入 `fast.config.toml` 和 `deep.config.toml`，可直接使用 `codex --profile fast` / `codex --profile deep`。
 - 写入可公开、安全的常用偏好：
   - 默认模型、reasoning effort、verbosity、review model
   - approval / sandbox 策略

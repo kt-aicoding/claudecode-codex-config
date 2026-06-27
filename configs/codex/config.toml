@@ -1,4 +1,4 @@
-# Safe Codex CLI preferences managed by kt-aicoding/cc-codex-config.
+# Safe Codex CLI preferences managed by kt-aicoding/claudecode-codex-config.
 # Secrets, provider tokens, project trust entries, and machine-local paths do not belong here.
 
 model = "gpt-5.5"

@@ -47,7 +47,7 @@
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.kt-aicoding/cc-codex-config/kt-statusline claude"
+    "command": "~/.kt-aicoding/claudecode-codex-config/kt-statusline claude"
   }
 }
 ```

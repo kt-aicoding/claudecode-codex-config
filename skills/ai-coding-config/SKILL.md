@@ -10,12 +10,12 @@ description: Configure Claude Code and Codex CLI preferences for KT AI Coding. U
 Configure both tools with the upstream installer:
 
 ```bash
-python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/cc-codex-config/main/scripts/install.py)"
+python3 -c "$(curl -fsSL https://raw.githubusercontent.com/kt-aicoding/claudecode-codex-config/main/scripts/install.py)"
 ```
 
 This installs:
 
-- Claude Code `statusLine` command at `~/.kt-aicoding/cc-codex-config/kt-statusline`
+- Claude Code `statusLine` command at `~/.kt-aicoding/claudecode-codex-config/kt-statusline`
 - Codex CLI safe preferences and `[tui].status_line` in `~/.codex/config.toml`
 - Warp-aware behavior for Claude Code statusLine colors when Warp exports `NO_COLOR=1`
 

@@ -356,7 +356,7 @@ ENV_SNIPPET = '''# kt-aicoding optional statusline controls.
 
 
 def main() -> int:
-    install_dir = Path(os.environ.get("KT_AICODING_CONFIG_HOME", Path.home() / ".kt-aicoding" / "cc-codex-config"))
+    install_dir = Path(os.environ.get("KT_AICODING_CONFIG_HOME", Path.home() / ".kt-aicoding" / "claudecode-codex-config"))
     command_path = install_dir / "kt-statusline"
     write_statusline_command(command_path)
     write_support_files(install_dir)
@@ -438,7 +438,7 @@ codex --profile fast
 codex --profile deep
 
 Backups are written next to changed files with a .bak-YYYYmmdd-HHMMSS suffix.
-Project: https://github.com/kt-aicoding/cc-codex-config
+Project: https://github.com/kt-aicoding/claudecode-codex-config
 """
 
 
